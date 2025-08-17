@@ -1,198 +1,117 @@
 package com.example.graphql.controller;
 
-import com.example.graphql.dto.UserUpdateDTO;
-import com.example.graphql.entity.*;
-import com.example.graphql.service.*;
-import com.example.graphql.service.ExternalServiceClient;
-import graphql.GraphQLException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
-import java.time.Duration;
-import java.util.Collections;
+import com.example.graphql.entity.Post;
+import com.example.graphql.entity.User;
+import com.example.graphql.service.PostService;
+import com.example.graphql.service.UserService;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.graphql.data.method.annotation.SchemaMapping;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
-import reactor.core.publisher.Mono;
 
-/**
- * GraphQLController is a Spring {@code @Controller} that handles incoming GraphQL queries and
- * mutations. It acts as the entry point for GraphQL operations, delegating business logic to
- * various service layers. This controller uses Spring for GraphQL annotations like
- * {@code @QueryMapping}, {@code @MutationMapping}, and {@code @SchemaMapping} to map GraphQL
- * operations to Java methods.
- *
- * <p>It also integrates Resilience4j for fault tolerance patterns such as Rate Limiting, Circuit
- * Breaking, and Time Limiting to enhance the robustness of external service calls.
- */
 @Controller
-@RateLimiter(
-    name =
-        "graphql") // Applies a rate limiter named 'graphql' to all methods within this controller.
 public class GraphQLController {
 
-  private final UserService userService;
-  private final PostService postService;
-  private final ExternalServiceClient externalServiceClient;
+    private final UserService userService;
+    private final PostService postService;
 
-  /**
-   * Constructs the GraphQLController with necessary service dependencies. Spring's dependency
-   * injection automatically provides instances of UserService, PostService, and
-   * ExternalServiceClient.
-   *
-   * @param userService The service responsible for user-related business logic.
-   * @param postService The service responsible for post-related business logic.
-   * @param externalServiceClient The client for interacting with external services.
-   */
-  @Autowired
-  public GraphQLController(
-      UserService userService,
-      PostService postService,
-      ExternalServiceClient externalServiceClient) {
-    this.userService = userService;
-    this.postService = postService;
-    this.externalServiceClient = externalServiceClient;
-  }
+    public GraphQLController(UserService userService, PostService postService) {
+        this.userService = userService;
+        this.postService = postService;
+    }
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~ Queries ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // --- User queries ---
+    @QueryMapping
+    public List<User> users() {
+        return userService.getAllUsers();
+    }
 
-  @QueryMapping
-  public List<User> users() {
-    return userService.findAll();
-  }
+    @QueryMapping
+    public User userByEmail(@Argument String email) {
+        return userService.getUserByEmail(email);
+    }
 
-  @QueryMapping
-  public User user(@Argument Long id) {
-    return userService
-        .findById(id)
-        .orElseThrow(() -> new GraphQLException("User not found with ID: " + id));
-  }
+    @QueryMapping
+    public User userById(@Argument Long id) {
+        return userService.getUserById(id);
+    }
 
-  @QueryMapping
-  public User userByUsername(@Argument String username) {
-    return userService
-        .findByUsername(username)
-        .orElseThrow(() -> new GraphQLException("User not found with username: " + username));
-  }
+    @QueryMapping
+    public List<User> searchUsers(@Argument String search) {
+        return userService.searchUsers(search);
+    }
 
-  @QueryMapping
-  public List<User> searchUsers(@Argument String search) {
-    return userService.searchUsers(search);
-  }
+    @QueryMapping
+    public long countUsers() {
+        return userService.countUsers();
+    }
 
-  @QueryMapping
-  @PreAuthorize("hasRole('ADMIN')")
-  public List<User> usersByRole(@Argument User.Role role) {
-    return userService.findByRole(role);
-  }
+    // --- User mutations ---
+    @MutationMapping
+    public User createUser(
+            @Argument String username, @Argument String email, @Argument String password, @Argument String role) {
+        return userService.createUser(username, email, password, role);
+    }
 
-  /**
-   * Fetches the currently authenticated user's details. This query requires the user to be
-   * authenticated. It retrieves the user directly from the security principal, avoiding an extra
-   * database lookup.
-   *
-   * @param authentication The Spring Security {@link Authentication} object.
-   * @return The {@link User} object representing the authenticated user.
-   */
-  @QueryMapping
-  @PreAuthorize("isAuthenticated()")
-  public User me(Authentication authentication) {
-    // The User object is stored as the principal by our custom JwtRequestFilter.
-    return (User) authentication.getPrincipal();
-  }
+    @MutationMapping
+    public User updateUser(
+            @Argument Long id,
+            @Argument String username,
+            @Argument String email,
+            @Argument String password,
+            @Argument String role) {
+        return userService.updateUserGraphQL(id, username, email, password, role);
+    }
 
-  @QueryMapping
-  public List<Post> posts() {
-    return postService.findAll();
-  }
+    @MutationMapping
+    public boolean deleteUser(@Argument Long id) {
+        return userService.deleteUserGraphQL(id);
+    }
 
-  @QueryMapping
-  public Post post(@Argument Long id) {
-    return postService
-        .findById(id)
-        .orElseThrow(() -> new GraphQLException("Post not found with ID: " + id));
-  }
+    // --- Post queries ---
+    @QueryMapping
+    public List<Post> posts() {
+        return postService.getAllPosts();
+    }
 
-  @QueryMapping
-  public List<Post> postsByUser(@Argument Long userId) {
-    return postService.findByUserId(userId);
-  }
+    @QueryMapping
+    public Post postById(@Argument Long id) {
+        return postService.getPostById(id);
+    }
 
-  @QueryMapping
-  public List<Post> searchPosts(@Argument String search) {
-    return postService.searchPosts(search);
-  }
+    @QueryMapping
+    public List<Post> postsByAuthor(@Argument String authorEmail) {
+        return postService.getPostsByAuthorEmail(authorEmail);
+    }
 
-  @QueryMapping
-  public String health() {
-    return "OK";
-  }
+    @QueryMapping
+    public List<Post> searchPosts(@Argument String search) {
+        return List.of(new Post(
+                "Search Not Implemented",
+                "This is a placeholder response. Search functionality is not implemented yet.",
+                null));
+        // postService.searchPosts(search);
+    }
 
-  @QueryMapping
-  @PreAuthorize("isAuthenticated()")
-  @CircuitBreaker(name = "externalService", fallbackMethod = "getCombinedDataFallback")
-  @TimeLimiter(name = "externalService")
-  public Mono<CombinedDataResponse> getCombinedData(@Argument String id) {
-    String token = extractJwt();
-    return Mono.zip(
-            externalServiceClient.callServiceA(id, token).timeout(Duration.ofSeconds(2)),
-            externalServiceClient.callServiceB(id, token).timeout(Duration.ofSeconds(2)))
-        .map(
-            tuple ->
-                new CombinedDataResponse(tuple.getT1().getData(), tuple.getT2().getData(), null));
-  }
+    @QueryMapping
+    public long countPosts() {
+        return postService.countPosts();
+    }
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~ Mutations ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // --- Post mutations ---
+    @MutationMapping
+    public Post createPost(@Argument String title, @Argument String content, @Argument String authorEmail) {
+        return postService.createPost(title, content, authorEmail);
+    }
 
-  @MutationMapping
-  @PreAuthorize("hasRole('ADMIN')")
-  public User updateUser(@Argument Long id, @Argument("user") UserUpdateDTO userUpdateDTO) {
-    return userService.updateUser(id, userUpdateDTO);
-  }
+    @MutationMapping
+    public Post updatePost(@Argument Long id, @Argument String title, @Argument String content) {
+        return postService.updatePostGraphQL(id, title, content);
+    }
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~ Schema Mappings ~~~~~~~~~~~~~~~~~~~~~~~
-
-  @SchemaMapping
-  public List<Post> posts(User user) {
-    return postService.findByUser(user);
-  }
-
-  /**
-   * Resolves the 'postCount' field for a {@link User} object. Returns a Long to prevent potential
-   * integer overflow for users with a very large number of posts.
-   *
-   * <p><b>Note:</b> Ensure the GraphQL schema for the `postCount` field is updated from `Int!` to
-   * `Long!` to match this change.
-   *
-   * @param user The {@link User} object for which to count posts.
-   * @return The number of posts as a Long.
-   */
-  @SchemaMapping
-  public Long postCount(User user) {
-    return postService.countByUser(user);
-  }
-
-  @SchemaMapping
-  public User user(Post post) {
-    return post.getUser();
-  }
-
-  // ~~~~~~~~~~~~~~~~~~~~~~~ Helper Methods ~~~~~~~~~~~~~~~~~~~~~~~
-
-  private String extractJwt() {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    return (String) auth.getCredentials();
-  }
-
-  public Mono<CombinedDataResponse> getCombinedDataFallback(String id, Throwable ex) {
-    return Mono.just(
-        new CombinedDataResponse(null, null, Collections.singletonList(ex.getMessage())));
-  }
+    @MutationMapping
+    public boolean deletePost(@Argument Long id) {
+        return postService.deletePostGraphQL(id);
+    }
 }

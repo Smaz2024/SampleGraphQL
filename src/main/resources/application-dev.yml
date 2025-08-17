@@ -1,139 +1,109 @@
 # ===================================================================
-# SPRING BOOT DEVELOPMENT PROFILE CONFIGURATION
-#
-# This file contains properties that are ONLY active when the 'dev'
-# Spring profile is enabled. It is designed for local development,
-# featuring an in-memory database, relaxed security, and verbose logging.
+# SPRING BOOT 3.x DEVELOPMENT PROFILE CONFIGURATION
 # ===================================================================
 
 spring:
   config:
     activate:
-      # Explicitly declares that this configuration belongs to the 'dev' profile.
-      # This profile should NEVER be activated in QA or production environments.
       on-profile: dev
 
-  # =================================================================
-  # DATABASE CONFIGURATION
-  # =================================================================
   datasource:
-    # H2 In-Memory Database Configuration
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    # ^-- In-memory instance named 'testdb'
-    # ^-- DB_CLOSE_DELAY=-1 keeps DB alive while JVM runs
-    # ^-- DB_CLOSE_ON_EXIT=FALSE lets JVM handle cleanup
     driver-class-name: org.h2.Driver
-    username: sa  # Default H2 system administrator account
-    password: ""  # Empty password for development convenience
+    username: sa
+    password: ""
 
   jpa:
     hibernate:
-      # Disable automatic schema management (we're using schema.sql)
       ddl-auto: none
-    show-sql: true  # Log all SQL statements to console
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-        format_sql: true  # Pretty-print SQL for better readability
-        # Generate statistics for performance tuning:
+        format_sql: true
         generate_statistics: true
-        # Show warnings during query execution:
         show_sql_warnings: true
 
-  # Database Initialization
   sql:
     init:
-      mode: always  # Always execute initialization scripts
-      platform: h2  # Database platform for script selection
-      schema-locations: classpath:schema.sql  # Schema creation script
-      data-locations: classpath:data.sql      # Initial data population script
-      # Fail fast if initialization encounters errors:
+      mode: always
+      platform: h2
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
       continue-on-error: false
 
-  # H2 Console Configuration
   h2:
     console:
       enabled: true
-      path: /h2-console  # Access at http://localhost:8080/h2-console
+      path: /h2-console
       settings:
-        web-allow-others: false  # Security: disable remote access
-        trace: false             # Disable trace output for security
+        web-allow-others: false
+        trace: false
 
-  # =================================================================
-  # CACHING CONFIGURATION
-  # =================================================================
   cache:
-    type: redis  # Use Redis as cache provider
+    type: redis
     redis:
-      time-to-live: 600000  # 10 minute TTL for cache entries
-      cache-null-values: false  # Don't cache null results
+      time-to-live: 600000
+      cache-null-values: false
 
-  redis:
-    host: localhost
-    port: 6379
-    database: 0  # Use DB 0 for development
-    # Timeout settings (milliseconds):
-    timeout: 2000
-    connect-timeout: 2000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 2000
 
-  # =================================================================
-  # GRAPHQL CONFIGURATION
-  # =================================================================
   graphql:
-    path: /graphql  # GraphQL endpoint
+    path: /graphql
     websocket:
-      path: /graphql-ws  # Subscription endpoint
+      path: /graphql-ws
     graphiql:
-      enabled: true  # Enable GraphiQL UI
-      path: /graphiql  # Access at http://localhost:8080/graphiql
-      # Enable subscriptions support in GraphiQL:
+      enabled: true
+      path: /graphiql
       subscriptions:
         path: /graphql-ws
 
 # ===================================================================
-# APPLICATION-SPECIFIC PROPERTIES
+# JWT & SECURITY
 # ===================================================================
-
-# JWT Configuration (Development Values Only)
 jwt:
-  # SECURITY WARNING: Never use hardcoded secrets in production!
-  # This value is for development convenience only.
-  secret: mySecretKey123456789012345678901234567890
-  # Token expiration settings (milliseconds):
-  expiration: 86400000        # 24 hours for access tokens
-  refresh-expiration: 604800000  # 7 days for refresh tokens
+  secret: ${SPRING_JWT_SECRET:devSecretKey} # Externalize secret
+  expiration: 86400000
+  refresh-expiration: 604800000
 
-# Security Configuration
 security:
   cors:
-    # Development CORS settings (open for localhost):
     allowed-origins: "http://localhost:3000,http://localhost:8080"
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "*"
     allow-credentials: true
-    # Maximum age for CORS pre-flight responses (seconds):
     max-age: 3600
+  jwt:
+    header: Authorization
+    prefix: "Bearer "
+    # JWT secret key for development (min 32 chars for HS256). Change for team use!
+    secret: ${JWT_SECRET:devsecretkeydevsecretkeydevsecretkey1234}
+    # Access token validity in milliseconds (default: 2 hours for dev)
+    access-token-validity: 7200000
+    # Refresh token validity in milliseconds (default: 7 days)
+    refresh-token-validity: 604800000
 
-# Logging Configuration
+# ===================================================================
+# LOGGING & OBSERVABILITY
+# ===================================================================
 logging:
   level:
-    # Application-specific logging:
     com.example: DEBUG
-    # Framework logging:
     org.springframework: INFO
     org.springframework.security: INFO
     org.springframework.graphql: INFO
     org.springframework.data: INFO
-    org.hibernate.SQL: DEBUG          # Log all SQL
-    org.hibernate.type: TRACE         # Log parameter binding
-    org.hibernate.stat: DEBUG         # Log statistics
-    # GraphQL query logging:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type: TRACE
+    org.hibernate.stat: DEBUG
     graphql.execution: INFO
     graphql.kickstart: INFO
 
-# ===================================================================
-# DEVELOPMENT TOOLS CONFIGURATION
-# ===================================================================
 management:
   endpoints:
     web:
@@ -142,9 +112,36 @@ management:
   endpoint:
     health:
       show-details: always
-    metrics:
-      enabled: true
   metrics:
     export:
       prometheus:
         enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+# ===================================================================
+# RESILIENCE4J CONFIGURATION
+# ===================================================================
+resilience4j:
+  retry:
+    default:
+      max-attempts: 3
+      wait-duration: 500ms
+  circuitbreaker:
+    default:
+      sliding-window-size: 100
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 10s
+  timelimiter:
+    default:
+      timeout-duration: 2s
+  ratelimiter:
+    default:
+      limit-for-period: 10
+      limit-refresh-period: 1s
+      timeout-duration: 0
+  bulkhead:
+    default:
+      max-concurrent-calls: 10
+      max-wait-duration: 0

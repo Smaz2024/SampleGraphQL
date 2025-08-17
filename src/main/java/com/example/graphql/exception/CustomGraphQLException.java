@@ -1,95 +1,59 @@
 package com.example.graphql.exception;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * A custom, structured exception designed for use within GraphQL resolvers.
  *
- * <p>This exception class enriches a standard {@link RuntimeException} with additional,
- * machine-readable error metadata, such as a status code, a general error title, and a list of
- * specific details. It is intended to be caught by a global GraphQL exception handler (like {@code
- * GraphQlExceptionHandler}) which can then use this structured information to build a detailed and
- * consistent error response for the client. This approach provides a richer error-handling
- * experience than a simple message string.
+ * <p>This exception enriches a standard {@link RuntimeException} with additional metadata, such as
+ * status codes, error titles, and detailed error messages. Intended for use with a global GraphQL
+ * exception handler to produce consistent, client-friendly error responses.
  */
 public class CustomGraphQLException extends RuntimeException {
 
-  /**
-   * An HTTP-like status code (e.g., 400 for Bad Request, 404 for Not Found) to provide a familiar
-   * error context to clients.
-   */
-  private final int statusCode;
+    private final int statusCode; // HTTP-like status (400, 404, etc.)
+    private final String error; // Short, descriptive error title
+    private final String path; // GraphQL path where error occurred
+    private final List<String> details; // Specific validation or error details
+    private final Instant timestamp; // Error occurrence time
 
-  /** A short, human-readable error title (e.g., "Not Found", "Validation Error"). */
-  private final String error;
+    /**
+     * Constructs a new CustomGraphQLException with detailed error information.
+     *
+     * @param statusCode HTTP-like status code for the error.
+     * @param error Short descriptive error title (e.g., "Not Found").
+     * @param message Main error message (passed to RuntimeException).
+     * @param path GraphQL path where the error occurred.
+     * @param details List of detailed error messages.
+     */
+    public CustomGraphQLException(int statusCode, String error, String message, String path, List<String> details) {
+        super(message);
+        this.statusCode = statusCode;
+        this.error = error;
+        this.path = path;
+        this.details = details != null ? Collections.unmodifiableList(details) : List.of();
+        this.timestamp = Instant.now();
+    }
 
-  /**
-   * A list of specific, detailed error messages. This is particularly useful for reporting multiple
-   * validation failures at once.
-   */
-  private final List<String> details;
+    public int getStatusCode() {
+        return statusCode;
+    }
 
-  /** The exact moment in time when the error occurred. */
-  private final Instant timestamp;
+    public String getError() {
+        return error;
+    }
 
-  /**
-   * Constructs a new CustomGraphQLException with detailed error information.
-   *
-   * @param statusCode The HTTP-like status code for the error.
-   * @param error A short, descriptive error title.
-   * @param message The main error message, passed to the superclass. This is typically what a
-   *     client would display to an end-user.
-   * @param path The GraphQL path where the error occurred (often unused here as it's handled by the
-   *     exception resolver).
-   * @param details A list of specific, detailed error strings.
-   */
-  public CustomGraphQLException(
-      int statusCode,
-      String error,
-      String message,
-      String path, // Path is often captured by the resolver, but included for completeness.
-      List<String> details) {
-    super(message);
-    this.statusCode = statusCode;
-    this.error = error;
-    this.details = details;
-    this.timestamp = Instant.now();
-  }
+    public String getPath() {
+        return path;
+    }
 
-  /**
-   * Gets the HTTP-like status code.
-   *
-   * @return The integer status code.
-   */
-  public int getStatusCode() {
-    return statusCode;
-  }
+    public List<String> getDetails() {
+        return details;
+    }
 
-  /**
-   * Gets the short, human-readable error title.
-   *
-   * @return The error title string.
-   */
-  public String getError() {
-    return error;
-  }
-
-  /**
-   * Gets the list of detailed error messages.
-   *
-   * @return A list of strings containing error details.
-   */
-  public List<String> getDetails() {
-    return details;
-  }
-
-  /**
-   * Gets the timestamp of when the error occurred.
-   *
-   * @return The {@link Instant} the exception was created.
-   */
-  public Instant getTimestamp() {
-    return timestamp;
-  }
+    public Instant getTimestamp() {
+        return timestamp;
+    }
 }

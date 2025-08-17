@@ -1,91 +1,104 @@
 # ===================================================================
 # SPRING BOOT QUALITY ASSURANCE (QA) PROFILE CONFIGURATION
-#
-# This file contains properties for the QA environment. It is designed to
-# closely mirror the production setup, using external databases and services,
-# but may have slightly different settings for testing purposes (e.g., logging levels,
-# specific endpoints for QA services).
+# Spring Boot 3.x Compatible
 # ===================================================================
 
 spring:
   config:
     activate:
-      # Explicitly declares that this configuration belongs to the 'qa' profile.
       on-profile: qa
 
-  # --- External Database Configuration ---
-  # Like production, all datasource properties MUST be provided by environment variables.
-  # This ensures that the QA environment connects to the correct, dedicated QA database
-  # without hardcoding credentials in the source code.
   datasource:
     url: ${DB_URL}
     driver-class-name: ${DB_DRIVER}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
-  # --- JPA & Hibernate Configuration for QA ---
   jpa:
     hibernate:
-      # 'validate' is the correct setting for QA. It verifies that the application's entity
-      # model is in sync with the QA database schema. If there's a mismatch, the application
-      # will fail to start, catching potential migration issues before they reach production.
       ddl-auto: validate
-    # SQL logging is typically disabled in QA to mimic production performance,
-    # but can be temporarily enabled for specific debugging tasks.
     show-sql: false
     properties:
       hibernate:
-        # The SQL dialect must match the QA database (e.g., PostgreSQL, MySQL).
         dialect: ${DB_DIALECT}
 
-  # --- Developer Console Security ---
-  # Developer consoles are disabled in QA to maintain a secure, production-like environment.
   h2:
     console:
       enabled: false
 
-  # --- Redis Cache Configuration for QA ---
-  # Connection details for the dedicated QA Redis instance must be provided via environment variables.
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
     password: ${REDIS_PASSWORD}
 
-  # --- GraphQL UI Security ---
-  # The GraphiQL UI is disabled in QA environments to prevent exposing a powerful
-  # query tool on a publicly accessible (or semi-public) server.
   graphql:
     graphiql:
       enabled: false
+    # Prevent expensive/abusive queries in QA
+    query-depth: 15
+    query-complexity: 200
 
 # ===================================================================
-# APPLICATION-SPECIFIC PROPERTIES FOR QA
+# SECURITY & AUTHENTICATION
 # ===================================================================
-
-jwt:
-  # The JWT secret for QA MUST be provided via an environment variable.
-  # This secret should be unique to the QA environment and different from dev and prod secrets.
-  secret: ${JWT_SECRET}
-  # JWT expiration can be set for QA. A 1-hour default is a reasonable middle ground.
-  expiration: ${JWT_EXPIRATION:3600000} # Defaults to 1 hour
-  # Refresh token expiration remains long to allow for realistic session testing.
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # Defaults to 7 days
-
 security:
-  # --- CORS Policy for QA ---
-  # The CORS policy must be configured to allow requests only from the specific
-  # QA frontend application's domain.
   cors:
-    allowed-origins: ${CORS_ORIGINS} # e.g., "https://qa.yourapp.com"
+    allowed-origins: ${CORS_ORIGINS}
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "Authorization,Content-Type"
     allow-credentials: true
+  jwt:
+    header: Authorization
+    prefix: "Bearer "
+    # JWT secret key for QA (must be set via environment variable, min 32 chars for HS256)
+    secret: ${JWT_SECRET}
+    # Access token validity in milliseconds (default: 1 hour for QA)
+    access-token-validity: ${JWT_EXPIRATION:3600000}
+    # Refresh token validity in milliseconds (default: 7 days)
+    refresh-token-validity: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# --- Logging Configuration for QA ---
-# Logging levels in QA are typically set to INFO to balance observability with performance,
-# but can be overridden via environment variables for targeted debugging sessions.
+# ===================================================================
+# RESILIENCE4J CONFIGURATION FOR QA
+# Ensures fault-tolerance is validated in non-prod
+# ===================================================================
+resilience4j:
+  retry:
+    instances:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms
+  circuitbreaker:
+    instances:
+      default:
+        sliding-window-size: 20
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+  timelimiter:
+    instances:
+      default:
+        timeout-duration: 3s
+  ratelimiter:
+    instances:
+      default:
+        limit-for-period: 10
+        limit-refresh-period: 1s
+
+# ===================================================================
+# LOGGING & OBSERVABILITY
+# ===================================================================
 logging:
   level:
     com.example: ${LOG_LEVEL:INFO}
     org.springframework.security: INFO
     org.springframework.graphql: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0  # Full tracing in QA for debugging

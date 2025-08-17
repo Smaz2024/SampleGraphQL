@@ -1,114 +1,109 @@
 package com.example.graphql.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.time.Instant;
+import java.util.Objects;
 
-/**
- * Represents a Post entity in the application, mapping to the 'posts' table in the database. This
- * entity stores information about a user's post, including its title, content, and the author. It
- * also includes timestamps for creation and last update, managed automatically by Hibernate.
- */
 @Entity
 @Table(name = "posts")
 public class Post {
 
-  /** The unique identifier for the post. Generated automatically using identity strategy. */
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  /** The title of the post. Must not be blank and its size must be between 3 and 200 characters. */
-  @NotBlank
-  @Size(min = 3, max = 200)
-  private String title;
+    @NotBlank
+    @Size(max = 200)
+    @Column(nullable = false)
+    private String title;
 
-  /**
-   * The main content of the post. Must not be blank and its size must be between 10 and 5000
-   * characters.
-   */
-  @NotBlank
-  @Size(min = 10, max = 5000)
-  private String content;
+    @NotBlank
+    @Lob
+    @Column(nullable = false)
+    private String content;
 
-  /**
-   * The user who authored this post. This is a many-to-one relationship, meaning many posts can
-   * belong to one user. {@code FetchType.LAZY} is used to load the user only when accessed. {@code
-   * optional = false} indicates that a post must always have an associated user.
-   * {@code @JoinColumn} specifies the foreign key column in the 'posts' table.
-   */
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "user_id")
-  private User user;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-  /** The timestamp when the post was created. Automatically set upon creation and not updatable. */
-  @CreationTimestamp
-  @Column(name = "created_at", updatable = false)
-  private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
 
-  /**
-   * The timestamp when the post was last updated. Automatically updated whenever the entity is
-   * modified.
-   */
-  @UpdateTimestamp
-  @Column(name = "updated_at")
-  private LocalDateTime updatedAt;
+    @Column(nullable = false)
+    private Instant updatedAt;
 
-  /** Default constructor for JPA. */
-  public Post() {}
+    protected Post() {
+        // JPA requirement
+    }
 
-  /**
-   * Constructs a new Post with the specified title, content, and associated user.
-   *
-   * @param title The title of the post.
-   * @param content The content of the post.
-   * @param user The user who created the post.
-   */
-  public Post(String title, String content, User user) {
-    this.title = title;
-    this.content = content;
-    this.user = user;
-  }
+    public Post(String title, String content, User user) {
+        this.title = title;
+        this.content = content;
+        this.user = user;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
 
-  // --- Getters ---
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
 
-  public Long getId() {
-    return id;
-  }
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 
-  public String getTitle() {
-    return title;
-  }
+    // Getters & setters
+    public Long getId() {
+        return id;
+    }
 
-  public String getContent() {
-    return content;
-  }
+    public String getTitle() {
+        return title;
+    }
 
-  public User getUser() {
-    return user;
-  }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
+    public String getContent() {
+        return content;
+    }
 
-  public LocalDateTime getUpdatedAt() {
-    return updatedAt;
-  }
+    public void setContent(String content) {
+        this.content = content;
+    }
 
-  // Setters for mutable fields
+    public User getUser() {
+        return user;
+    }
 
-  public void setTitle(String title) {
-    this.title = title;
-  }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-  public void setContent(String content) {
-    this.content = content;
-  }
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 
-  public void setUser(User user) {
-    this.user = user;
-  }
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    // Equality based on title + author
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Post post)) return false;
+        return Objects.equals(title, post.title) && Objects.equals(user, post.user);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(title, user);
+    }
 }

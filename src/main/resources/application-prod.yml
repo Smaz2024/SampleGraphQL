@@ -68,6 +68,15 @@ security:
   # A custom flag to enforce HTTPS, which is critical for protecting data in transit.
   # This is often used in conjunction with a reverse proxy that terminates SSL.
   require-ssl: true
+  jwt:
+    header: Authorization
+    prefix: "Bearer "
+    # JWT secret key for production (must be set via environment variable, min 32 chars for HS256)
+    secret: ${JWT_SECRET}
+    # Access token validity in milliseconds (default: 15 minutes for prod)
+    access-token-validity: 900000
+    # Refresh token validity in milliseconds (default: 7 days)
+    refresh-token-validity: 604800000
 
 # Set default log levels for production to reduce log volume and focus on important events.
 logging:
