@@ -1,0 +1,207 @@
+# ============================================================================
+# GraphQL Schema Definition
+#
+# This document serves as the single source of truth for the API's capabilities.
+# It defines all available data types, queries, mutations, and subscriptions.
+# ============================================================================
+
+# --- Custom Scalar Types ---
+
+# Defines a custom scalar for ISO-8601 formatted date and time strings.
+# GraphQL lacks a built-in DateTime type, so this scalar provides a standard
+# for representing timestamps, which the backend serializes/deserializes
+# from/to a native date object (e.g., Java's Instant).
+scalar DateTime
+
+# ============================================================================
+# Core Object Types
+# These types represent the main resources of the application.
+# ============================================================================
+
+# Represents a user account in the system.
+type User {
+    # The unique identifier for the user. 'ID' is a special scalar that serializes
+    # as a String but signals its purpose as a unique key.
+    # The '!' denotes that this field is Non-Nullable.
+    id: ID!
+
+    # The user's unique, public-facing username.
+    username: String!
+
+    # The user's unique email address, typically used for login and notifications.
+    email: String!
+
+    # The role assigned to the user, controlling their permissions via an enum.
+    role: Role!
+
+    # The timestamp when the user account was created.
+    createdAt: DateTime!
+
+    # The timestamp of the last update to the user account.
+    updatedAt: DateTime!
+
+    # A list of all posts created by this user. This represents a graph relationship.
+    # [Post!]! means:
+    #   - The list itself cannot be null (an empty list [] will be returned instead).
+    #   - Items within the list cannot be null.
+    # This provides strong guarantees for the client.
+    posts: [Post!]!
+
+    # A computed field resolved by the backend. It is not a direct database column
+    # but is calculated on-the-fly, showcasing GraphQL's flexibility.
+    postCount: Int!
+}
+
+# Represents a single post, like a blog article or a message.
+type Post {
+    # The unique identifier for the post.
+    id: ID!
+
+    # The title of the post.
+    title: String!
+
+    # The main body content of the post.
+    content: String!
+
+    # The user who created the post. This nested type allows clients to traverse
+    # the data graph, fetching post and user details in a single request.
+    user: User!
+
+    # The timestamp when the post was created.
+    createdAt: DateTime!
+
+    # The timestamp of the last update to the post.
+    updatedAt: DateTime!
+}
+
+# ============================================================================
+# Enumeration Types
+# Enums provide type-safe, restricted sets of values for specific fields.
+# ============================================================================
+
+# Defines a fixed set of roles a user can have, preventing invalid role assignments.
+enum Role {
+    USER
+    ADMIN
+    MODERATOR
+}
+
+# ============================================================================
+# Payload & Input Types
+# These types are used for mutations to ensure clean, strongly-typed arguments.
+# ============================================================================
+
+# The data payload returned after a successful authentication operation.
+# It bundles together all necessary information for the client to manage the session.
+type AuthPayload {
+    # The short-lived JSON Web Token (JWT) for authenticating subsequent API requests.
+    token: String!
+
+    # The long-lived token used to obtain a new access token without re-entering credentials.
+    refreshToken: String!
+
+    # The details of the authenticated user, allowing the client to update its state immediately.
+    user: User!
+}
+
+# Defines the input structure for creating a new user.
+# Using 'input' types is a best practice that keeps mutation arguments organized.
+input UserInput {
+    username: String!
+    email: String!
+
+    # WARNING: This field is for input only and must never be exposed in an output type.
+    # The backend is responsible for securely hashing this password before storage.
+    password: String!
+
+    # The role is optional. The backend should assign a default role (e.g., USER) if not provided.
+    role: Role
+}
+
+# Defines the input structure for updating an existing user.
+# All fields are optional, allowing clients to perform partial updates (e.g., only changing the email)
+# without needing to send the entire user object.
+input UserUpdateInput {
+    username: String
+    email: String
+    password: String # For password changes, which should trigger a re-hashing on the backend.
+    role: Role
+}
+
+# Defines the input structure for creating a new post.
+input PostInput {
+    title: String!
+    content: String!
+
+    # The ID of the user creating the post.
+    # The backend must validate that the currently authenticated user has permission
+    # to create a post for this userId (usually, they must be the same user).
+    userId: ID!
+}
+
+# Defines the input structure for updating an existing post.
+input PostUpdateInput {
+    title: String
+    content: String
+}
+
+# Defines the input structure for the login mutation.
+input LoginInput {
+    username: String!
+    password: String!
+}
+
+# ============================================================================
+# Root Operation Types
+# These are the entry points into the GraphQL API.
+# ============================================================================
+
+# The root type for all read operations (data fetching).
+type Query {
+    # --- User Queries ---
+    users: [User!]!
+    user(id: ID!): User
+    userByUsername(username: String!): User
+    searchUsers(search: String!): [User!]!
+    usersByRole(role: Role!): [User!]!
+
+    # A common pattern to fetch the details of the currently authenticated user,
+    # derived from their JWT. This is more secure than passing a user ID.
+    me: User
+
+    # --- Post Queries ---
+    posts: [Post!]!
+    post(id: ID!): Post
+    postsByUser(userId: ID!): [Post!]!
+    searchPosts(search: String!): [Post!]!
+
+    # --- Utility Queries ---
+    # A simple health check endpoint to verify the service is running, often used by monitoring tools.
+    health: String!
+}
+
+# The root type for all write operations (create, update, delete).
+type Mutation {
+    # --- Auth Mutations ---
+    login(input: LoginInput!): AuthPayload!
+    register(input: UserInput!): AuthPayload!
+    refreshToken(refreshToken: String!): AuthPayload!
+
+    # --- User Mutations ---
+    createUser(input: UserInput!): User!
+    updateUser(id: ID!, input: UserUpdateInput!): User!
+    # A delete mutation often returns a boolean to confirm success or the ID of the deleted object.
+    deleteUser(id: ID!): Boolean!
+
+    # --- Post Mutations ---
+    createPost(input: PostInput!): Post!
+    updatePost(id: ID!, input: PostUpdateInput!): Post!
+    deletePost(id: ID!): Boolean!
+}
+
+# The root type for real-time, push-based operations.
+# Clients can subscribe to these events (typically over WebSockets) to receive data as it happens.
+type Subscription {
+    # Notifies subscribed clients in real-time whenever a new post is created.
+    postAdded: Post!
+}

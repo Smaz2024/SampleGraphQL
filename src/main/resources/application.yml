@@ -1,0 +1,116 @@
+# ===================================================================
+# BASE SPRING BOOT CONFIGURATION (COMMON TO ALL PROFILES)
+#
+# This file defines the foundational properties that are shared across all
+# environments (dev, qa, prod). It establishes sensible defaults and
+# structural configurations. Profile-specific files (e.g., application-dev.yml)
+# will inherit and override these settings as needed.
+# ===================================================================
+
+spring:
+  profiles:
+    # Sets the default active profile to 'dev'. This is a developer-friendly setting,
+    # ensuring the application runs in development mode out-of-the-box without any
+    # special configuration. In containerized environments (QA, Prod), this MUST be
+    # overridden by setting the 'SPRING_PROFILES_ACTIVE' environment variable.
+    active: dev
+  application:
+    # Defines the canonical name for the application. This name is used consistently
+    # in logging, service discovery, and by management endpoints like Actuator.
+    name: graphql-poc
+  # Configures Spring's caching abstraction.
+  cache:
+    # Specifies Redis as the default cache provider for all environments.
+    # The actual connection details (host, port, password) are defined in the
+    # profile-specific files to connect to the correct Redis instance.
+    type: redis
+  # Defines the base paths for the GraphQL API endpoints.
+  # Keeping these in the base file ensures URL consistency across all environments.
+  graphql:
+    path: /graphql
+    websocket:
+      path: /graphql
+
+# Configures the embedded web server (e.g., Tomcat, Jetty, Undertow).
+server:
+  port: 8080 # The default port the application will listen on.
+  # Enables graceful shutdown, a critical feature for production-grade applications.
+  # When the application is told to stop, it will first finish processing any active
+  # requests before shutting down, preventing abrupt errors for clients.
+  shutdown: graceful
+
+# Defines non-secret, structural properties for JWT handling.
+# These settings describe the shape of the token and where to find it.
+security:
+  jwt:
+    # The name of the HTTP header where the client is expected to send the JWT.
+    header: Authorization
+    # The scheme or prefix expected before the token string (e.g., "Bearer <token>").
+    # The space at the end is intentional and important for parsing.
+    prefix: "Bearer "
+
+# Defines the global logging format for the application.
+logging:
+  pattern:
+    # A standardized, readable format for all console log messages.
+    # Includes timestamp, thread, log level, logger name, and the message.
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Configures Spring Boot Actuator for application monitoring and management.
+management:
+  endpoints:
+    web:
+      exposure:
+        # A security best practice: expose only a curated list of safe Actuator endpoints
+        # over HTTP. This prevents accidental leakage of sensitive information.
+        # 'health' & 'info' are safe. 'metrics' & 'prometheus' are for monitoring systems.
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      # Configures the /actuator/health endpoint to always show full component details
+      # (e.g., database status, disk space, Redis connectivity). For stricter security
+      # in production, this could be changed to 'when-authorized'.
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        # Enables the /actuator/prometheus endpoint, which exposes metrics in a format
+        # that can be scraped by a Prometheus monitoring server.
+        enabled: true
+
+# ===================================================================
+# RESILIENCE4J FAULT TOLERANCE DEFAULTS
+#
+# Provides a sensible baseline configuration for resilience patterns.
+# These defaults apply to all environments but can be fine-tuned or
+# overridden in profile-specific files if needed.
+# ===================================================================
+resilience4j:
+  circuitbreaker:
+    instances:
+      # Default settings for any circuit breaker named 'userService'.
+      userService:
+        register-health-indicator: true # Exposes the breaker's state (OPEN, CLOSED) in the /actuator/health endpoint.
+        sliding-window-size: 10         # The breaker makes its decision based on the last 10 calls.
+        minimum-number-of-calls: 5      # The breaker won't trip until at least 5 calls have been made.
+        permitted-number-of-calls-in-half-open-state: 3 # Allows 3 "test" calls to see if the downstream service has recovered.
+        automatic-transition-from-open-to-half-open-enabled: true # Automatically tries to recover after the wait duration.
+        wait-duration-in-open-state: 5s # Stays in the OPEN state for 5 seconds before transitioning to HALF_OPEN.
+        failure-rate-threshold: 50      # Trips the circuit if 50% or more of the calls in the sliding window fail.
+        record-exceptions:
+          - java.lang.Exception         # Defines which exceptions should be considered as failures.
+  retry:
+    instances:
+      # Default settings for any retry mechanism named 'userService'.
+      userService:
+        max-attempts: 3                 # Will attempt a failed call a total of 3 times (1 initial + 2 retries).
+        wait-duration: 1s               # The initial wait time between the first and second attempt.
+        enable-exponential-backoff: true # Increases the wait time between subsequent retries to avoid overwhelming a struggling service.
+        exponential-backoff-multiplier: 2 # Doubles the wait duration for each subsequent retry (e.g., 1s, 2s, 4s...).
+  ratelimiter:
+    instances:
+      # Default settings for any rate limiter named 'graphql'.
+      graphql:
+        limit-for-period: 100           # Allows a maximum of 100 requests...
+        limit-refresh-period: 60s       # ...within any given 60-second period.
+        timeout-duration: 1s            # If the rate limit is hit, a request will wait up to 1 second for a permit before failing.

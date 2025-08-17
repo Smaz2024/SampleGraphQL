@@ -1,0 +1,150 @@
+# ===================================================================
+# SPRING BOOT DEVELOPMENT PROFILE CONFIGURATION
+#
+# This file contains properties that are ONLY active when the 'dev'
+# Spring profile is enabled. It is designed for local development,
+# featuring an in-memory database, relaxed security, and verbose logging.
+# ===================================================================
+
+spring:
+  config:
+    activate:
+      # Explicitly declares that this configuration belongs to the 'dev' profile.
+      # This profile should NEVER be activated in QA or production environments.
+      on-profile: dev
+
+  # =================================================================
+  # DATABASE CONFIGURATION
+  # =================================================================
+  datasource:
+    # H2 In-Memory Database Configuration
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    # ^-- In-memory instance named 'testdb'
+    # ^-- DB_CLOSE_DELAY=-1 keeps DB alive while JVM runs
+    # ^-- DB_CLOSE_ON_EXIT=FALSE lets JVM handle cleanup
+    driver-class-name: org.h2.Driver
+    username: sa  # Default H2 system administrator account
+    password: ""  # Empty password for development convenience
+
+  jpa:
+    hibernate:
+      # Disable automatic schema management (we're using schema.sql)
+      ddl-auto: none
+    show-sql: true  # Log all SQL statements to console
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true  # Pretty-print SQL for better readability
+        # Generate statistics for performance tuning:
+        generate_statistics: true
+        # Show warnings during query execution:
+        show_sql_warnings: true
+
+  # Database Initialization
+  sql:
+    init:
+      mode: always  # Always execute initialization scripts
+      platform: h2  # Database platform for script selection
+      schema-locations: classpath:schema.sql  # Schema creation script
+      data-locations: classpath:data.sql      # Initial data population script
+      # Fail fast if initialization encounters errors:
+      continue-on-error: false
+
+  # H2 Console Configuration
+  h2:
+    console:
+      enabled: true
+      path: /h2-console  # Access at http://localhost:8080/h2-console
+      settings:
+        web-allow-others: false  # Security: disable remote access
+        trace: false             # Disable trace output for security
+
+  # =================================================================
+  # CACHING CONFIGURATION
+  # =================================================================
+  cache:
+    type: redis  # Use Redis as cache provider
+    redis:
+      time-to-live: 600000  # 10 minute TTL for cache entries
+      cache-null-values: false  # Don't cache null results
+
+  redis:
+    host: localhost
+    port: 6379
+    database: 0  # Use DB 0 for development
+    # Timeout settings (milliseconds):
+    timeout: 2000
+    connect-timeout: 2000
+
+  # =================================================================
+  # GRAPHQL CONFIGURATION
+  # =================================================================
+  graphql:
+    path: /graphql  # GraphQL endpoint
+    websocket:
+      path: /graphql-ws  # Subscription endpoint
+    graphiql:
+      enabled: true  # Enable GraphiQL UI
+      path: /graphiql  # Access at http://localhost:8080/graphiql
+      # Enable subscriptions support in GraphiQL:
+      subscriptions:
+        path: /graphql-ws
+
+# ===================================================================
+# APPLICATION-SPECIFIC PROPERTIES
+# ===================================================================
+
+# JWT Configuration (Development Values Only)
+jwt:
+  # SECURITY WARNING: Never use hardcoded secrets in production!
+  # This value is for development convenience only.
+  secret: mySecretKey123456789012345678901234567890
+  # Token expiration settings (milliseconds):
+  expiration: 86400000        # 24 hours for access tokens
+  refresh-expiration: 604800000  # 7 days for refresh tokens
+
+# Security Configuration
+security:
+  cors:
+    # Development CORS settings (open for localhost):
+    allowed-origins: "http://localhost:3000,http://localhost:8080"
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    # Maximum age for CORS pre-flight responses (seconds):
+    max-age: 3600
+
+# Logging Configuration
+logging:
+  level:
+    # Application-specific logging:
+    com.example: DEBUG
+    # Framework logging:
+    org.springframework: INFO
+    org.springframework.security: INFO
+    org.springframework.graphql: INFO
+    org.springframework.data: INFO
+    org.hibernate.SQL: DEBUG          # Log all SQL
+    org.hibernate.type: TRACE         # Log parameter binding
+    org.hibernate.stat: DEBUG         # Log statistics
+    # GraphQL query logging:
+    graphql.execution: INFO
+    graphql.kickstart: INFO
+
+# ===================================================================
+# DEVELOPMENT TOOLS CONFIGURATION
+# ===================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true

@@ -1,0 +1,102 @@
+plugins {
+    // Manages Spring Boot tasks (bootRun, bootJar) and dependency versions via a BOM.
+    id 'org.springframework.boot' version '3.2.1'
+
+    // Enforces consistent code style and formatting automatically.
+    id 'com.diffplug.spotless' version '6.25.0'
+
+    // Integrates Spring's dependency management for version alignment across modules.
+    id 'io.spring.dependency-management' version '1.1.4'
+
+    // Provides standard Java compilation, testing, and packaging tasks.
+    id 'java'
+}
+
+// Defines the project's Maven coordinates.
+group = 'com.example'
+version = '1.0.0'
+
+// Sets the Java version for source code compatibility.
+sourceCompatibility = '21'
+
+// Configures the JDK toolchain to be used for building the project.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Specifies the repository for fetching project dependencies.
+repositories {
+    mavenCentral() // The primary public repository for Java libraries.
+}
+
+// Declares the project's library dependencies.
+dependencies {
+    // ---- Spring Boot Starters ----
+    implementation 'org.springframework.boot:spring-boot-starter-graphql' // Core support for building GraphQL APIs.
+    implementation 'org.springframework.boot:spring-boot-starter-web' // For building traditional REST APIs (used by GraphiQL, Actuator).
+    implementation 'org.springframework.boot:spring-boot-starter-webflux' // Support for reactive web applications (e.g., GraphQL subscriptions).
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // Data persistence using JPA and Hibernate.
+    implementation 'org.springframework.boot:spring-boot-starter-security' // Authentication and authorization.
+    implementation 'org.springframework.boot:spring-boot-starter-validation' // For data validation using annotations (e.g., @NotBlank).
+    implementation 'org.springframework.boot:spring-boot-starter-actuator' // Production-ready features like health checks and metrics.
+    implementation 'org.springframework.boot:spring-boot-starter-cache' // General caching abstraction.
+
+    // ---- JWT for Stateless Authentication ----
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3' // Core JWT API.
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3' // Runtime implementation for JWT creation and parsing.
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3' // JSON processing for JWT using Jackson.
+
+    // ---- Resilience4j (Fault Tolerance) ----
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j' // Implements circuit breakers, retries, etc.
+
+    // ---- Databases ----
+    runtimeOnly 'com.h2database:h2' // In-memory database for local development and testing.
+    runtimeOnly 'org.postgresql:postgresql' // JDBC driver for PostgreSQL.
+
+    // ---- Redis (Caching & Messaging) ----
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // Redis integration for caching.
+
+    // ---- Metrics ----
+    implementation 'io.micrometer:micrometer-registry-prometheus' // Exposes application metrics in Prometheus format.
+
+    // ---- Developer Productivity ----
+    compileOnly 'org.projectlombok:lombok:1.18.30' // Reduces boilerplate code (getters, setters, constructors).
+    annotationProcessor 'org.projectlombok:lombok:1.18.30' // Processes Lombok annotations at compile time.
+
+    // ---- Testing ----
+    testImplementation 'org.springframework.boot:spring-boot-starter-test' // Core testing utilities for Spring Boot.
+    testImplementation 'org.springframework.graphql:spring-graphql-test' // Utilities for testing GraphQL controllers.
+    testImplementation 'org.springframework.security:spring-security-test' // Utilities for testing secured endpoints.
+    testImplementation 'io.projectreactor:reactor-test' // For testing reactive streams (Mono/Flux).
+}
+
+// Configures Spotless to automatically format Java code.
+spotless {
+    java {
+        target 'src/**/*.java' // Apply formatting to all Java source files.
+        googleJavaFormat() // Use Google's standard Java style guide.
+        removeUnusedImports() // Automatically remove unused import statements.
+        trimTrailingWhitespace() // Remove whitespace at the end of lines.
+        endWithNewline() // Ensure every file ends with a newline character.
+    }
+}
+
+// Manages dependency versions for the Spring Cloud ecosystem.
+dependencyManagement {
+    imports {
+        // Imports the Spring Cloud Bill of Materials (BOM) to align dependency versions.
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.0"
+    }
+}
+
+// Configures the test runner to use the JUnit 5 platform.
+test {
+    useJUnitPlatform()
+}
+
+// Ensures code is formatted before compilation.
+tasks.named('compileJava') {
+    dependsOn 'spotlessApply' // Runs the Spotless auto-formatter before the compile task.
+}
