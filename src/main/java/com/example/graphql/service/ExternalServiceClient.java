@@ -16,6 +16,11 @@ import reactor.core.publisher.Mono;
 
 @Service
 public class ExternalServiceClient {
+    // For testability: allow direct WebClient injection
+    public ExternalServiceClient(JwtUtil jwtUtil, WebClient webClient) {
+        this.jwtUtil = jwtUtil;
+        this.webClient = webClient;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(ExternalServiceClient.class);
     private static final String BACKEND = "externalService";
