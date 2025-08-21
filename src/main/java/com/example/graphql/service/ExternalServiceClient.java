@@ -1,3 +1,6 @@
+/**
+ * Service for calling external APIs and aggregating their responses.
+ */
 package com.example.graphql.service;
 
 import com.example.graphql.entity.ExternalServiceResponse;

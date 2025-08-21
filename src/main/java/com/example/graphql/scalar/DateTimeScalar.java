@@ -1,3 +1,7 @@
+/**
+ * Custom GraphQL scalar for ISO-8601 date/time strings.
+ * Used to serialize/deserialize Java date objects in GraphQL.
+ */
 package com.example.graphql.scalar;
 
 import graphql.language.StringValue;

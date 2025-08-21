@@ -1,3 +1,7 @@
+/**
+ * Configures Spring Security for the application.
+ * Sets up JWT authentication and access rules.
+ */
 package com.example.graphql.security;
 
 import java.util.List;

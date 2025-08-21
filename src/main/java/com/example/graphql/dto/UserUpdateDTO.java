@@ -10,6 +10,9 @@ public class UserUpdateDTO {
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     private String username;
 
+/**
+ * DTO for updating user information via GraphQL mutations.
+ */
     @Email(message = "Invalid email format")
     private String email;
 

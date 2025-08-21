@@ -1,3 +1,5 @@
+# Main Spring Boot application configuration file.
+# Defines global settings for GraphQL, database, security, and more.
 # ===================================================================
 # BASE SPRING BOOT CONFIGURATION (COMMON TO ALL PROFILES)
 #

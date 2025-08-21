@@ -1,3 +1,7 @@
+/**
+ * JPA repository for Post entities.
+ * Provides CRUD and custom queries for posts.
+ */
 package com.example.graphql.repository;
 
 import com.example.graphql.entity.Post;

@@ -1,3 +1,7 @@
+/**
+ * JPA repository for User entities.
+ * Provides CRUD and custom search operations.
+ */
 package com.example.graphql.repository;
 
 import com.example.graphql.entity.User;

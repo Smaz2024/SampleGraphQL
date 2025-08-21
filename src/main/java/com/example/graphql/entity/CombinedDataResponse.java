@@ -10,6 +10,9 @@ import java.util.List;
  * from microservices is required and partial success/error reporting is needed.
  */
 public class CombinedDataResponse {
+    /**
+     * DTO for combining multiple data sources in a single GraphQL response.
+     */
     private final String serviceAData;
     private final String serviceBData;
     private final List<String> errors;

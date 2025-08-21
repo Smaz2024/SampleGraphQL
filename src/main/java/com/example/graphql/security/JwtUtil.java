@@ -1,3 +1,6 @@
+/**
+ * Utility class for creating and validating JWT tokens.
+ */
 package com.example.graphql.security;
 
 import io.jsonwebtoken.Claims;

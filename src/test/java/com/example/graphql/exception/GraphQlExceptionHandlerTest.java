@@ -38,8 +38,7 @@ public class GraphQlExceptionHandlerTest {
     @BeforeEach
     void setUp() {
         exceptionHandler = new GraphQlExceptionHandler();
-        when(mockEnv.getExecutionStepInfo()).thenReturn(mock());
-        when(mockEnv.getExecutionStepInfo().getPath()).thenReturn(mock());
+        // No global stubbing needed; each test uses its own mockEnvWithFieldAndStepInfo()
     }
 
     private DataFetchingEnvironment mockEnvWithField() {

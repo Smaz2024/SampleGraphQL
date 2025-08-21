@@ -1,3 +1,6 @@
+/**
+ * DTO representing the response from an external service.
+ */
 package com.example.graphql.entity;
 
 /**

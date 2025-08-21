@@ -1,3 +1,6 @@
+/**
+ * Entity representing a user account in the system.
+ */
 package com.example.graphql.entity;
 
 import jakarta.persistence.*;

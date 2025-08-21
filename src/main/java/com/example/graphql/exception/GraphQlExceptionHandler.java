@@ -1,3 +1,7 @@
+/**
+ * Handles exceptions thrown in GraphQL resolvers.
+ * Maps Java exceptions to GraphQL error responses.
+ */
 package com.example.graphql.exception;
 
 import graphql.GraphQLError;

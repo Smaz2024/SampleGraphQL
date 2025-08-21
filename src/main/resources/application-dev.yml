@@ -2,6 +2,9 @@
 # SPRING BOOT 3.x DEVELOPMENT PROFILE CONFIGURATION
 # ===================================================================
 
+# Development environment configuration.
+# Overrides settings for local development, H2 DB, Redis, and JWT secrets.
+
 spring:
   config:
     activate:

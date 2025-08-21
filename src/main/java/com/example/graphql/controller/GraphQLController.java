@@ -8,14 +8,25 @@ import java.util.List;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SubscriptionMapping;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 @Controller
 public class GraphQLController {
 
+    /**
+     * Main GraphQL controller.
+     * Handles queries, mutations, and subscriptions for users and posts.
+     */
     private final UserService userService;
     private final PostService postService;
 
+    /**
+     * Main GraphQL controller.
+     * Handles queries, mutations, and subscriptions for users and posts.
+     */
     public GraphQLController(UserService userService, PostService postService) {
         this.userService = userService;
         this.postService = postService;
@@ -81,8 +92,8 @@ public class GraphQLController {
     }
 
     @QueryMapping
-    public List<Post> postsByAuthor(@Argument String authorEmail) {
-        return postService.getPostsByAuthorEmail(authorEmail);
+    public Flux<Post> postsByAuthor(@Argument String authorEmail) {
+        return postService.getPostsByAuthorEmailReactive(authorEmail);
     }
 
     @QueryMapping
@@ -95,23 +106,30 @@ public class GraphQLController {
     }
 
     @QueryMapping
-    public long countPosts() {
-        return postService.countPosts();
+    public Mono<Long> countPosts() {
+        return Mono.fromCallable(() -> postService.countPosts())
+            .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
     }
 
     // --- Post mutations ---
     @MutationMapping
-    public Post createPost(@Argument String title, @Argument String content, @Argument String authorEmail) {
-        return postService.createPost(title, content, authorEmail);
+    public Mono<Post> createPost(@Argument String title, @Argument String content, @Argument String authorEmail) {
+        return postService.createPostReactive(title, content, authorEmail);
     }
 
     @MutationMapping
-    public Post updatePost(@Argument Long id, @Argument String title, @Argument String content) {
-        return postService.updatePostGraphQL(id, title, content);
+    public Mono<Post> updatePost(@Argument Long id, @Argument String title, @Argument String content) {
+        return postService.updatePostReactive(id, title, content);
     }
 
     @MutationMapping
-    public boolean deletePost(@Argument Long id) {
-        return postService.deletePostGraphQL(id);
+    public Mono<Boolean> deletePost(@Argument Long id) {
+        return postService.deletePostReactive(id);
+    }
+
+    // --- Subscriptions ---
+    @SubscriptionMapping
+    public Flux<Post> postAdded() {
+        return postService.postFlux();
     }
 }

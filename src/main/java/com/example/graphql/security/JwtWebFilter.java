@@ -1,3 +1,6 @@
+/**
+ * Web filter for extracting and validating JWT tokens from requests.
+ */
 package com.example.graphql.security;
 
 import jakarta.annotation.Nonnull;

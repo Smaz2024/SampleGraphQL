@@ -3,6 +3,9 @@
 # Spring Boot 3.x Compatible
 # ===================================================================
 
+# QA/testing environment configuration.
+# Used for integration tests and QA deployments.
+
 spring:
   config:
     activate:

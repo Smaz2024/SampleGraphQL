@@ -2,6 +2,8 @@
 # This file contains settings specifically for a live production environment.
 # It prioritizes security, performance, and stability over developer convenience.
 
+# Production environment configuration.
+# Secure settings for production deployment, real DB, and secrets.
 
 spring:
     config:

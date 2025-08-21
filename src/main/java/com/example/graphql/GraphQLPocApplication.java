@@ -1,3 +1,7 @@
+/**
+ * Main entry point for the Spring Boot GraphQL application.
+ * Sets up core configuration and runs the service.
+ */
 package com.example.graphql;
 
 import com.example.graphql.service.PostService;
@@ -21,6 +25,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableJpaRepositories(basePackages = "com.example.graphql.repository")
 public class GraphQLPocApplication implements CommandLineRunner {
 
+/**
+ * Main entry point for the Spring Boot GraphQL application.
+ * Sets up core configuration and runs the service.
+ */
     private static final Logger log = LoggerFactory.getLogger(GraphQLPocApplication.class);
 
     private final UserService userService;

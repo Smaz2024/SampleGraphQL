@@ -1,3 +1,7 @@
+/**
+ * Custom exception for GraphQL errors.
+ * Used to provide structured error responses to clients.
+ */
 package com.example.graphql.exception;
 
 import java.time.Instant;
